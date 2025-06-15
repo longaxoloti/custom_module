@@ -30,7 +30,7 @@ def train_step(model: torch.nn.Module,
         loss.backward()
         optimizer.step()
         
-        if scheduler is not None and not isinstance(scheduler, torch.optim.lr_scheduler.ReduceOnPlateau):
+        if scheduler is not None and not isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
             scheduler.step()
         
         y_pred_class = torch.argmax(torch.softmax(y_pred, dim=1), dim=1)
@@ -65,13 +65,13 @@ def test_step(model: torch.nn.Module,
     return test_loss, test_acc
 
 
-def save_best_checkpoint(model: torch.nn.Module, save_path: str):
-    save_path = pathlib.Path(save_path)
-    if save_path.parent:
-        save_path.parent.mkdir(parents = True, exist_ok = True)
-    if save_path.exists():
-        save_path.unlink()
-    torch.save(model.state_dict(), save_path)
+def save_best_checkpoint(model: torch.nn.Module, target_dir:str = "models", filename: str = "best_weights.pth"):
+    dir_path = pathlib.Path(target_dir)
+    dir_path.mkdir(parents=True, exist_ok=True)
+    checkpoint_path = dir_path / filename
+    if checkpoint_path.exists():
+        checkpoint_path.unlink()
+    torch.save(model.state_dict(), checkpoint_path)
     
 
 def train(model: torch.nn.Module,
@@ -117,8 +117,7 @@ def train(model: torch.nn.Module,
         
         if test_acc > best_acc:
             best_acc = test_acc
-            save_path = 'models/best_weights.pth'
-            save_best_checkpoint(model, save_path)
+            save_best_checkpoint(model)
         
         results["train_loss"].append(train_loss)
         results["train_acc"].append(train_acc)
