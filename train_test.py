@@ -65,8 +65,12 @@ def test_step(model: torch.nn.Module,
     return test_loss, test_acc
 
 
-def save_best_checkpoint(model: torch.nn.Module, save_path: str) -> None:
-    os.makedirs(os.path.dirname(save_path), exist_ok = True)
+def save_best_checkpoint(model: torch.nn.Module, save_path: str):
+    save_path = pathlib.Path(save_path)
+    if save_path.parent:
+        save_path.parent.mkdir(parents = True, exist_ok = True)
+    if save_path.exists():
+        save_path.unlink()
     torch.save(model.state_dict(), save_path)
     
 
@@ -113,8 +117,8 @@ def train(model: torch.nn.Module,
         
         if test_acc > best_acc:
             best_acc = test_acc
-            save_best_checkpoint(model, 'best_weight.pth')
-            print(f"--> New best model saved with test_acc = {best_acc:.4f} at (still edit)")
+            save_path = 'models/best_weights.pth'
+            save_best_checkpoint(model, save_path)
         
         results["train_loss"].append(train_loss)
         results["train_acc"].append(train_acc)
@@ -142,18 +146,17 @@ def pred_and_store(paths: List[pathlib.Path],
         model.eval()
         
         with torch.inference_mode():
-            pred_logit = model(transformed_image)
-            pred_prob = torch.softmax(pred_logit, dim=1)
-            pred_label = torch.argmax(pred_prob, dim = 1)
-            pred_class = class_names[pred_label.cpu()]
+            logits = model(transformed_image)
+            probs = torch.softmax(logits, dim=1)
+            label = torch.argmax(probs, dim = 1)
             
-            pred_dict["pred_prob"] = round(pred_prob.unsqueeze(0).max().cpu().item(), 4)
-            pred_dict["pred_class"] = pred_class
+            pred_dict["pred_prob"] = round(probs.unsqueeze(0).max().cpu().item(), 4)
+            pred_dict["pred_class"] = class_names[label.cpu()]
             
             end_time = timer()
             pred_dict["time_for_pred"] = round(end_time - start_time, 4)
             
-        pred_dict["correct"] = class_name == pred_class
+        pred_dict["correct"] = class_name == class_names[label.cpu()]
         pred_list.append(pred_dict)
         
     return pred_list
