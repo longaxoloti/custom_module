@@ -65,13 +65,27 @@ def test_step(model: torch.nn.Module,
     return test_loss, test_acc
 
 
+def detect_base_dir():
+    if os.path.exists("/kaggle/working"):
+        return pathlib.Path("/kaggle/working")
+    elif os.path.exists("/content"):
+        return pathlib.Path("/content")
+    else:
+        return pathlib.Path.cwd()
+
+
 def save_best_checkpoint(model: torch.nn.Module, target_dir:str = "models", filename: str = "best_weights.pth"):
-    dir_path = pathlib.Path(target_dir)
-    dir_path.mkdir(parents=True, exist_ok=True)
-    checkpoint_path = dir_path / filename
+    base_dir = detect_base_dir()
+    
+    final_dir = base_dir / target_dir
+    final_dir.mkdir(parents = True, exist_ok = True)
+    checkpoint_path = final_dir / filename
+    
     if checkpoint_path.exists():
         checkpoint_path.unlink()
+        
     torch.save(model.state_dict(), checkpoint_path)
+    print(f"[INFO] Model saved at {checkpoint_path}")
     
 
 def train(model: torch.nn.Module,
